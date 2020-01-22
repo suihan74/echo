@@ -1,18 +1,29 @@
 package main
 
 import (
-    "github.com/gin-gonic/gin"
+    "log"
+    "net/http"
+
+    "github.com/gorilla/mux"
+    "github.com/gorilla/handlers"
 )
 
+func public(w http.ResponseWriter, r *http.Request) {
+    w.Write([]byte("hello public!\n"))
+}
+
+func private(w http.ResponseWriter, r *http.Request) {
+    w.Write([]byte("hello private!\n"))
+}
+
 func main() {
-    router := gin.Default()
-    router.LoadHTMLGlob("templates/*.html")
+    allowedOrigins := handlers.AllowedOrigins([]string {"http://localhost:8080"})
+    allowedMethods := handlers.AllowedMethods([]string{"GET", "POST", "DELETE", "PUT"})
+    allowedHeaders := handlers.AllowedHeaders([]string{"Authorization"})
 
-    data := "ここが地獄か"
+    router := mux.NewRouter()
+    router.HandleFunc("/public", public)
+    router.HandleFunc("/private", private)
 
-    router.GET("/", func(ctx *gin.Context) {
-        ctx.HTML(200, "index.html", gin.H { "data": data })
-    })
-
-    router.Run(":8080")
+    log.Fatal(http.ListenAndServe(":8000", handlers.CORS(allowedOrigins, allowedMethods, allowedHeaders)(router)))
 }

@@ -43,3 +43,8 @@ web系ほぼ知らないので勉強しながらという感じなのでアレ�
 - [Vue.js + Go + Firebaseでwebアプリを作る](https://qiita.com/po3rin/items/d3e016d01162e9d9de80)
 
 - [npmコマンドの使い方](https://qiita.com/wifecooky/items/c3be77e54233fcfca376)
+
+
+### 次ここから
+
+https://qiita.com/po3rin/items/d3e016d01162e9d9de80#firebase-authentication-%E3%82%92%E4%BD%BF%E3%81%A3%E3%81%A6%E8%AA%8D%E8%A8%BC%E6%A9%9F%E8%83%BD%E3%82%92%E8%BF%BD%E5%8A%A0%E3%81%99%E3%82%8B
