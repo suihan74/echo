@@ -8,8 +8,10 @@ func main() {
     router := gin.Default()
     router.LoadHTMLGlob("templates/*.html")
 
+    data := "ここが地獄か"
+
     router.GET("/", func(ctx *gin.Context) {
-        ctx.HTML(200, "index.html", gin.H {})
+        ctx.HTML(200, "index.html", gin.H { "data": data })
     })
 
     router.Run(":8080")
