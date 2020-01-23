@@ -2,6 +2,7 @@ package main
 
 import (
     "context"
+    "encoding/json"
     "fmt"
     "log"
     "os"
@@ -57,14 +58,34 @@ func private(w http.ResponseWriter, r *http.Request) {
     w.Write([]byte("hello private!\n"))
 }
 
+type Post struct {
+    Text string `json:\"text\"`
+}
+
+/*
+ * 投稿を受け付ける
+ */
+func postEcho(w http.ResponseWriter, r *http.Request) {
+    var post Post
+    json.NewDecoder(r.Body).Decode(&post)
+
+    // 結果を返す
+    json.NewEncoder(w).Encode(post)
+
+    fmt.Printf("post: %v\n", post.Text)
+}
+
 func main() {
     allowedOrigins := handlers.AllowedOrigins([]string {"http://localhost:8080"})
     allowedMethods := handlers.AllowedMethods([]string{"GET", "POST", "DELETE", "PUT"})
-    allowedHeaders := handlers.AllowedHeaders([]string{"Authorization"})
+    allowedHeaders := handlers.AllowedHeaders([]string{"Authorization", "Content-Type"})
 
     router := mux.NewRouter()
-    router.HandleFunc("/public", public)
-    router.HandleFunc("/private", authMiddleware(private))
+
+    // エンドポイント
+    router.HandleFunc("/public", public).Methods("GET")
+    router.HandleFunc("/private", authMiddleware(private)).Methods("GET")
+    router.HandleFunc("/posts/post", authMiddleware(postEcho)).Methods("POST")
 
     log.Fatal(http.ListenAndServe(":8000", handlers.CORS(allowedOrigins, allowedMethods, allowedHeaders)(router)))
 }

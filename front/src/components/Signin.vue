@@ -30,7 +30,7 @@ export default {
       firebase.auth().signInWithEmailAndPassword(this.email, this.password).then(res => {
         res.user.getIdToken().then(token => {
           localStorage.setItem('jwt', token)
-          this.$router.push('/')
+          this.$router.push('/home')
         })
       }, err => {
         alert(err.message)
