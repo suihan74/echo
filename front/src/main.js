@@ -20,7 +20,6 @@ const firebaseConfig = {
 }
 firebase.initializeApp(firebaseConfig)
 
-
 // firebase初期化完了後にVueインスタンスを作成する
 let app
 firebase.auth().onAuthStateChanged(user => {

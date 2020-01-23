@@ -12,10 +12,10 @@ export default {
   name: 'Top',
   methods: {
     signIn: async function () {
-        this.$router.push('/signin')
+      this.$router.push('/signin')
     },
     signUp: async function () {
-        this.$router.push('/signup')
+      this.$router.push('/signup')
     }
   }
 }

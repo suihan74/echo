@@ -2,7 +2,6 @@ package main
 
 import (
     "context"
-    "encoding/json"
     "fmt"
     "log"
     "os"
@@ -14,9 +13,34 @@ import (
 
     firebase "firebase.google.com/go"
     "google.golang.org/api/option"
+
+    "github.com/jinzhu/gorm"
+    _ "github.com/jinzhu/gorm/dialects/postgres"
 )
 
-func authMiddleware(next http.HandlerFunc) http.HandlerFunc {
+var db *gorm.DB
+
+func initDatabase() {
+    var err error
+    db, err = gorm.Open(
+        "postgres",
+        "user=echo dbname=echo password=echo sslmode=disable")
+    if err != nil {
+        panic(err)
+    }
+
+    db.AutoMigrate(&User{})
+    db.AutoMigrate(&Post{})
+}
+
+type AuthHandlerFunc func(w http.ResponseWriter, r *http.Request, db *gorm.DB, user User)
+
+/**
+ * ミドルウェア
+ *
+ * Firebaseで認証する
+ */
+func authMiddleware(next AuthHandlerFunc) http.HandlerFunc {
     return func(w http.ResponseWriter, r *http.Request) {
         // Firebase SDK のセットアップ
         opt := option.WithCredentialsFile(os.Getenv("CREDENTIALS"))
@@ -37,55 +61,59 @@ func authMiddleware(next http.HandlerFunc) http.HandlerFunc {
         idToken := strings.Replace(authHeader, "Bearer ", "", 1)
 
         // JWT 検証
-        token, err := auth.VerifyIDToken(context.Background(), idToken)
+        token, err := auth.VerifyIDTokenAndCheckRevoked(context.Background(), idToken)
         if err != nil {
-            fmt.Printf("error verifying ID token: %v\n", err)
-            w.WriteHeader(http.StatusUnauthorized)
-            w.Write([]byte("error verifying ID token\n"))
+            if err.Error() == "ID token has been revoked" {
+                fmt.Printf("ID token has been revoked: %v\n", err)
+                w.WriteHeader(http.StatusNonAuthoritativeInfo)
+                w.Write([]byte("error verifying ID token\n"))
+            } else {
+                fmt.Printf("error verifying ID token: %v\n", err)
+                w.WriteHeader(http.StatusUnauthorized)
+                w.Write([]byte("error verifying ID token\n"))
+            }
             return
         }
 
-        log.Printf("Verified ID token: %v\n", token)
-        next.ServeHTTP(w, r)
+        // ユーザー情報を登録する
+        user := registerUser(token.UID)
+
+        next(w, r, db, user)
     }
 }
 
-func public(w http.ResponseWriter, r *http.Request) {
-    w.Write([]byte("hello public!\n"))
-}
-
-func private(w http.ResponseWriter, r *http.Request) {
-    w.Write([]byte("hello private!\n"))
-}
-
-type Post struct {
-    Text string `json:\"text\"`
-}
-
 /*
- * 投稿を受け付ける
+ * ユーザー情報を(必要なら)登録する
  */
-func postEcho(w http.ResponseWriter, r *http.Request) {
-    var post Post
-    json.NewDecoder(r.Body).Decode(&post)
-
-    // 結果を返す
-    json.NewEncoder(w).Encode(post)
-
-    fmt.Printf("post: %v\n", post.Text)
+func registerUser(userId string) User {
+    var user User
+    db.Where(User{Token: userId}).Find(&user)
+    if user.Id == 0 {
+        user.Token = userId
+        db.Create(&user)
+    }
+    return user
 }
 
 func main() {
+    initDatabase()
+
     allowedOrigins := handlers.AllowedOrigins([]string {"http://localhost:8080"})
     allowedMethods := handlers.AllowedMethods([]string{"GET", "POST", "DELETE", "PUT"})
     allowedHeaders := handlers.AllowedHeaders([]string{"Authorization", "Content-Type"})
 
     router := mux.NewRouter()
 
-    // エンドポイント
-    router.HandleFunc("/public", public).Methods("GET")
-    router.HandleFunc("/private", authMiddleware(private)).Methods("GET")
-    router.HandleFunc("/posts/post", authMiddleware(postEcho)).Methods("POST")
+////// エンドポイント //////
+
+    // 投稿関連
+    router.HandleFunc("/post", authMiddleware(postEndPoint)).Methods("POST")
+    router.HandleFunc("/posts", authMiddleware(getPostsEndPoint)).Methods("GET")
+
+    // ユーザー関連
+    router.HandleFunc("/user", authMiddleware(getUserEndPoint)).Methods("GET")
+
+////// エンドポイントここまで //////
 
     log.Fatal(http.ListenAndServe(":8000", handlers.CORS(allowedOrigins, allowedMethods, allowedHeaders)(router)))
 }

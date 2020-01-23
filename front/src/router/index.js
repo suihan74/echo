@@ -7,9 +7,12 @@ import Home from '@/components/Home'
 import Signup from '@/components/Signup'
 import Signin from '@/components/Signin'
 
+import homeLayout from '@/components/layouts/homeLayout'
+import simpleLayout from '@/components/layouts/simpleLayout'
+
 Vue.use(Router)
 
-let router = new Router({
+const router = new Router({
   routes: [
     {
       path: '*',
@@ -18,12 +21,12 @@ let router = new Router({
     {
       path: '/',
       name: 'Top',
-      component: Top
+      component: simpleLayout(Top)
     },
     {
       path: '/home',
       name: 'Home',
-      component: Home,
+      component: homeLayout(Home),
       meta: { requiresAuth: true }
     },
     {
@@ -40,12 +43,12 @@ let router = new Router({
 })
 
 router.beforeEach((to, from, next) => {
-  let currentUser = firebase.auth().currentUser
-  let requiresAuth = to.matched.some(record => record.meta.requiresAuth)
-  if (requiresAuth && !currentUser) {
+  const currentUser = firebase.auth().currentUser
+  const requiresAuth = to.matched.some(record => record.meta.requiresAuth)
+  if (currentUser && to.name === 'Top') {
+    next('home')
+  } else if (requiresAuth && !currentUser) {
     next('signin')
-  } else if (!requiresAuth && currentUser) {
-    next()
   } else {
     next()
   }
