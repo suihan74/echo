@@ -7,7 +7,7 @@
     <h2>Sign in</h2>
     <input type="text" placeholder="user name" v-model="email"/>
     <input type="password" placeholder="password" v-model="password"/>
-    <button>Signin</button>
+    <button @click="signIn">Signin</button>
     <p>Do you have no accounts?
       <router-link to="/signup">Sign up</router-link>
     </p>
@@ -15,12 +15,26 @@
 </template>
 
 <script>
+import firebase from 'firebase'
+
 export default {
-  name: 'Signup',
+  name: 'Signin',
   data () {
     return {
       email: '',
       password: ''
+    }
+  },
+  methods: {
+    signIn: function () {
+      firebase.auth().signInWithEmailAndPassword(this.email, this.password).then(res => {
+        res.user.getIdToken().then(token => {
+          localStorage.setItem('jwt', token)
+          this.$router.push('/')
+        })
+      }, err => {
+        alert(err.message)
+      })
     }
   }
 }
