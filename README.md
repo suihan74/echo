@@ -34,7 +34,7 @@ web系ほぼ知らないので勉強しながらという感じなのでアレ�
 
 2. /backで`go run *.go`する
 
-3. /fontで`npm run dev`する
+3. /frontで`npm run dev`する
 
 4. localhost:8080を開く
 
