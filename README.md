@@ -28,11 +28,19 @@ web系ほぼ知らないので勉強しながらという感じなのでアレ�
 
 - Firebaseかどっかにデプロイする
 
+## ローカルで動かすやつ
+
+1. `sudo service postgresql start`する
+
+2. /backで`go run *.go`する
+
+3. /fontで`npm run dev`する
+
+4. localhost:8080を開く
+
 ## 参考
 
 ### Go
-
-- [Go/Ginの使い方](https://qiita.com/hyo_07/items/59c093dda143325b1859)
 
 - [go modの使い方](https://blog.mmmcorp.co.jp/blog/2019/10/10/go-mod/)
 
