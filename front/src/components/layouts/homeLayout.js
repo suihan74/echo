@@ -10,14 +10,10 @@ export default function simpleLayout (PageComponent) {
     },
     render () {
       return (
-        <v-app>
-          <v-app-bar app={true} color="primary" dark={true}>
-            <Header propsData={this.$attrs} />
-          </v-app-bar>
-          <v-content>
-            <PageComponent propsData={this.$attrs} />
-          </v-content>
-        </v-app>
+        <div>
+          <Header propsData={this.$attrs} />
+          <PageComponent propsData={this.$attrs} />
+        </div>
       )
     }
   })

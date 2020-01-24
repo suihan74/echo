@@ -8,11 +8,7 @@ export default function simpleLayout (PageComponent) {
     },
     render () {
       return (
-        <v-app>
-          <v-content>
-            <PageComponent propsData={this.$attrs} />
-          </v-content>
-        </v-app>
+        <PageComponent propsData={this.$attrs} />
       )
     }
   })
