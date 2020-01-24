@@ -43,8 +43,7 @@ func postEndPoint(w http.ResponseWriter, r *http.Request, db *gorm.DB, user User
     // 引用先を探す
     if post.QuoteId != 0 {
         var quote Post
-        quote.Id = post.QuoteId
-        db.Where(quote).Find(&quote)
+        db.Where("id = ?", post.QuoteId).Find(&quote)
         post.QuotePost = &quote
     }
 
@@ -59,6 +58,14 @@ func getPostsEndPoint(w http.ResponseWriter, r *http.Request, db *gorm.DB, user 
     // 最新の投稿をN個まで取得する
     var posts []Post
     db.Order("id desc").Limit(20).Find(&posts)
+
+    for idx, p := range posts {
+        if p.QuoteId != 0 {
+            var quote Post
+            db.Where("id = ?", p.QuoteId).First(&quote)
+            posts[idx].QuotePost = &quote
+        }
+    }
 
     json.NewEncoder(w).Encode(posts)
 }
