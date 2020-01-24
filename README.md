@@ -4,7 +4,7 @@
 
 ## いまこんなの
 
-![現況](wiki/images/ss.png)
+![現況](https://github.com/suihan74/echo/wiki/images/ss.png)
 
 ## やりたいこと (箇条書き)
 
