@@ -2,6 +2,10 @@
 
 完全匿名SNSをつくってみる（つくってみたい）
 
+## いまこんなの
+
+![現況](https://github.com/suihan74/echo/wiki/images/ss.png)
+
 ## やりたいこと (箇条書き)
 
 - 完全匿名なSNS
@@ -26,7 +30,13 @@ web系ほぼ知らないので勉強しながらという感じなのでアレ�
 
 - Goでバックエンドつくる
 
+- PostgreSQLつかう
+
+  - Goでやるにはgormとか使う
+
 - Firebaseかどっかにデプロイする
+
+  - とりあえず認証機能はFirebaseで提供されているやつを使うことにした
 
 ## ローカルで動かすやつ
 
@@ -43,6 +53,8 @@ web系ほぼ知らないので勉強しながらという感じなのでアレ�
 ### Go
 
 - [go modの使い方](https://blog.mmmcorp.co.jp/blog/2019/10/10/go-mod/)
+
+- [gormクエリの使い方](http://gorm.io/ja_JP/docs/query.html)
 
 ### js
 
