@@ -54,6 +54,8 @@ web系ほぼ知らないので勉強しながらという感じなのでアレ�
 
 - [go modの使い方](https://blog.mmmcorp.co.jp/blog/2019/10/10/go-mod/)
 
+- [gormクエリの使い方](http://gorm.io/ja_JP/docs/query.html)
+
 ### js
 
 - [nodebrewをインストール](https://contents.shinonomekazan.com/tips/wsl-with-node.html#node-jsのインストール)
