@@ -4,7 +4,7 @@
 
 ## いまこんなの
 
-![現況](https://github.com/suihan74/echo/wiki/images/ss.png)
+![現況](https://github.com/suihan74/echo/wiki/images/ss_2.png)
 
 ## やりたいこと (箇条書き)
 
@@ -56,6 +56,8 @@ web系ほぼ知らないので勉強しながらという感じなのでアレ�
 
 - [gormクエリの使い方](http://gorm.io/ja_JP/docs/query.html)
 
+- [http status code](http://golang.jp/pkg/http)
+
 ### js
 
 - [nodebrewをインストール](https://contents.shinonomekazan.com/tips/wsl-with-node.html#node-jsのインストール)
@@ -64,3 +66,6 @@ web系ほぼ知らないので勉強しながらという感じなのでアレ�
 
 - [npmコマンドの使い方](https://qiita.com/wifecooky/items/c3be77e54233fcfca376)
 
+### styles
+
+- [icons](https://freedesignresources.net/100-free-minimal-line-icons/)

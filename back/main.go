@@ -108,6 +108,7 @@ func main() {
 
     // 投稿関連
     router.HandleFunc("/post", authMiddleware(postEndPoint)).Methods("POST")
+    router.HandleFunc("/post", authMiddleware(deletePostEndPoint)).Methods("DELETE")
     router.HandleFunc("/posts", authMiddleware(getPostsEndPoint)).Methods("GET")
 
     // ユーザー関連
