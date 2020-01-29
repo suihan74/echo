@@ -115,7 +115,9 @@ func getPostsEndPoint(w http.ResponseWriter, r *http.Request, db *gorm.DB, user 
         if p.QuoteId != 0 {
             var quote Post
             db.Where("id = ?", p.QuoteId).First(&quote)
-            posts[idx].QuotePost = &quote
+            if quote.Id != 0 {
+                posts[idx].QuotePost = &quote
+            }
         }
     }
 
