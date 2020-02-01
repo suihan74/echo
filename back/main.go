@@ -97,11 +97,13 @@ func registerUser(userId string) User {
 }
 
 func main() {
+    port := ":8000"
+
     initDatabase()
 
-    allowedOrigins := handlers.AllowedOrigins([]string {"http://localhost:8080"})
-    allowedMethods := handlers.AllowedMethods([]string{"GET", "POST", "DELETE", "PUT"})
-    allowedHeaders := handlers.AllowedHeaders([]string{"Authorization", "Content-Type"})
+//    allowedOrigins := handlers.AllowedOrigins([]string { "http://localhost:8080/" })
+    allowedMethods := handlers.AllowedMethods([]string{ "GET", "POST", "DELETE", "PUT" })
+    allowedHeaders := handlers.AllowedHeaders([]string{ "Authorization", "Content-Type" })
 
     router := mux.NewRouter()
 
@@ -121,5 +123,5 @@ func main() {
 
 ////// エンドポイントここまで //////
 
-    log.Fatal(http.ListenAndServe(":8000", handlers.CORS(allowedOrigins, allowedMethods, allowedHeaders)(router)))
+    log.Fatal(http.ListenAndServe(port, handlers.CORS(/*allowedOrigins,*/ allowedMethods, allowedHeaders)(router)))
 }
