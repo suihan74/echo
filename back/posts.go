@@ -89,7 +89,12 @@ func check(w http.ResponseWriter, isError bool, msg string) bool {
  * 投稿する
  *
  * POST /post?text=hoge&quote_id=1234
- * params: text: required, quote_id: optional
+ *
+ * params
+ * - text: string (required)
+ * - quote_id: int64 (optional, default = 0 (equals to nil))
+ *
+ * reqsponse: Post
  */
 func postEndPoint(w http.ResponseWriter, r *http.Request, db *gorm.DB, user User) {
     var err error
@@ -133,6 +138,10 @@ func postEndPoint(w http.ResponseWriter, r *http.Request, db *gorm.DB, user User
  * 投稿を削除する
  *
  * DELETE /post?id=1234
+ *
+ * params
+ * - id: int64 (required)
+ *
  * response: 200(OK) or 400(BadRequest)
  */
 func deletePostEndPoint(w http.ResponseWriter, r *http.Request, db *gorm.DB, user User) {
@@ -162,6 +171,10 @@ func deletePostEndPoint(w http.ResponseWriter, r *http.Request, db *gorm.DB, use
  * 指定したIDの投稿を取得する
  *
  * GET /post?id=1234
+ *
+ * params
+ * - id: int64 (required)
+ *
  * response: 200(json of the post) or 400
  */
 func getPostEndPoint(w http.ResponseWriter, r *http.Request, db *gorm.DB, user User) {
@@ -184,12 +197,29 @@ func getPostEndPoint(w http.ResponseWriter, r *http.Request, db *gorm.DB, user U
  * 最近の投稿を取得する
  *
  * GET /posts
- * response: Post
+ *
+ * params  
+ * - limit: int32 (default = 20)
+ * - offset: int32 (default = 0)
+ *
+ * response: []Post
  */
 func getPostsEndPoint(w http.ResponseWriter, r *http.Request, db *gorm.DB, user User) {
+    var limit, offset int64 = 20, 0
+
+    limitStr, err := getQueryParam(r, "limit")
+    if err == nil {
+        limit, err = strconv.ParseInt(limitStr, 10, 32)
+    }
+
+    offsetStr, err := getQueryParam(r, "offset")
+    if err == nil {
+        offset, err = strconv.ParseInt(offsetStr, 10, 32)
+    }
+
     // 最新の投稿をN個まで取得する
     var posts []Post
-    db.Order("id desc").Limit(20).Find(&posts)
+    db.Order("id desc").Offset(offset).Limit(limit).Find(&posts)
 
     for idx, p := range posts {
         posts[idx].IsYours = p.UserId == user.Id
@@ -209,6 +239,9 @@ func getPostsEndPoint(w http.ResponseWriter, r *http.Request, db *gorm.DB, user 
  * 投稿をお気に入りにする
  *
  * POST /fav?id=1234
+ *
+ * params
+ * - id: int64 (required)
  */
 func favoritePostEndPoint(w http.ResponseWriter, r *http.Request, db *gorm.DB, user User) {
     postId, err := getQueryParam(r, "id")
