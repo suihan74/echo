@@ -60,7 +60,7 @@
                   </g>
                 </g>
               </svg>
-              <span v-if="post.favorited_count>0" class="timeline-command-item-favs-count">
+              <span v-if="post.is_yours && post.favorited_count>0" class="timeline-command-item-favs-count">
                 {{ post.favorited_count }}
               </span>
             </div>
@@ -237,6 +237,8 @@ textarea {
   display: flex;
   flex-direction: column;
   margin: 0 3vw;
+  max-width: 600px;
+  margin: 0 auto;
 }
 
 /* 投稿エリア */
@@ -371,7 +373,7 @@ textarea {
   display: flex;
   flex-direction: row;
   margin-top: 3px;
-  width: 100%;
+  width: 400px;
 }
 .timeline-item-command {
   flex: 1;
