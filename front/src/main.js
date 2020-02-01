@@ -3,7 +3,8 @@
 import Vue from 'vue'
 import App from './App'
 import router from './router'
-import firebase from 'firebase'
+import * as firebase from 'firebase/app'
+import 'firebase/auth'
 
 Vue.config.productionTip = false
 
