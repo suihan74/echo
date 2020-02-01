@@ -4,7 +4,21 @@
 
 ## いまこんなの
 
-![現況](https://github.com/suihan74/echo/wiki/images/ss_2.png)
+![現況](https://github.com/suihan74/echo/wiki/images/ss_3.png "2020/02/02")
+
+### 2020/02/02
+
+- Fav機能を作り始めた
+
+    - 同一の投稿に複数回favできてしまう(一回だけにするかこのままにするか)
+
+- 投稿APIの投げ方を変えた
+
+    - 前: Post型から変換したJSONを投げる
+    
+    - 今: クエリパラメータに必要なものを書く e.g. /post?text=hoge&quote_id=1234
+
+- 投稿ボタンのスタイル適当に書いた
 
 ## やりたいこと (箇条書き)
 
