@@ -53,13 +53,16 @@
             </div>
             <!-- スター -->
             <div class="timeline-item-command">
-              <svg class="timeline-command-item" viewBox="0 0 24 24">
+              <svg class="timeline-command-item" viewBox="0 0 24 24" @click="favPost(post.id)">
                 <g id="Page-1" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
                   <g id="ic-star" fill-rule="nonzero" fill="#4A4A4A">
                       <path d="M12.0017152,16.5646495 L12.0017152,16.5646495 L16.1590997,18.729349 C16.6992758,19.0106121 17.0545245,18.7616573 16.9526411,18.1733301 L16.1563427,13.5750922 L19.5295166,10.3186021 C19.9567491,9.90614832 19.8153364,9.49285128 19.2039409,9.40486256 L14.5694162,8.73788691 L12.4846801,4.55427191 C12.2206359,4.02439229 11.7854844,4.01899407 11.5187502,4.55427191 L9.43401412,8.73788691 L4.79948941,9.40486256 C4.1819817,9.49373092 4.04232876,9.9019464 4.4739137,10.3186021 L7.8470876,13.5750922 L7.05078926,18.1733301 C6.94993336,18.7557241 7.30418646,19.0105955 7.84433065,18.729349 L12.0017152,16.5646495 Z M13.0533494,18.4630088 L13.0533494,18.4630088 L8.89596492,20.6277083 C6.72107743,21.7601458 4.45335461,20.158052 4.8588441,17.8165462 L5.65514244,13.2183084 L6.27877839,15.1019963 L2.90560449,11.8455062 C1.16702032,10.1670626 2.06332326,7.62020285 4.47313299,7.2733961 L9.1076577,6.60642045 L7.4327014,7.800529 L9.51743752,3.61691401 C10.5944416,1.45559958 13.4144029,1.46646459 14.4859928,3.61691401 L16.5707289,7.800529 L14.8957726,6.60642045 L19.5302974,7.2733961 C21.9340082,7.61932513 22.8320473,10.1712744 21.0978259,11.8455062 L17.724652,15.1019963 L18.3482879,13.2183084 L19.1445862,17.8165462 C19.551592,20.1668077 17.2796923,21.7587604 15.1074654,20.6277083 L10.9500809,18.4630088 L13.0533494,18.4630088 Z" id="Star-1"></path>
                   </g>
                 </g>
               </svg>
+              <span v-if="post.favorited_count>0" class="timeline-command-item-favs-count">
+                {{ post.favorited_count }}
+              </span>
             </div>
             <!-- 消去 -->
             <div class="timeline-item-command">
@@ -122,7 +125,10 @@ export default {
         quote_id: (this.quote_post ? this.quote_post.id : 0)
       }
 
-      this.axios.post('/post', data, this.axios.defaults.headers).then(res => {
+      this.axios.post('/post', null, {
+        params: data,
+        headers: this.axios.defaults.headers
+      }).then(res => {
         // 投稿後編集内容をクリアしてタイムラインを更新する
         this.post_text = ''
         this.quote_post = null
@@ -135,7 +141,7 @@ export default {
     /** (自分の)投稿を削除する */
     deletePost: function (postId) {
       this.axios.delete('/post?id=' + postId, this.axios.defaults.headers).then(res => {
-        this.posts = this.posts.filter(p => p.id != postId)
+        this.posts = this.posts.filter(p => p.id !== postId)
         console.log('deleted post: ' + postId)
       }).catch(err => {
         console.error(err)
@@ -146,6 +152,15 @@ export default {
     getPosts: function () {
       this.axios.get('posts').then(res => {
         this.posts = res.data
+      }).catch(err => {
+        console.error(err)
+      })
+    },
+
+    /** 投稿をお気に入りにする */
+    favPost: function (postId) {
+      this.axios.post('/fav?id=' + postId, this.axios.defaults.headers).then(res => {
+        console.log('favorite post: ' + postId)
       }).catch(err => {
         console.error(err)
       })
@@ -164,8 +179,8 @@ export default {
 
     clickPost: function (post) {
       console.log('text: ' + post.text)
-      console.log('quoteId: ' + post.quote)
       console.log('quote: ' + post.quote_post)
+      console.log('favs: ' + post.favorited_count)
       console.log('is_yours: ' + post.is_yours)
     },
 
@@ -244,9 +259,22 @@ textarea {
   font-size: 14pt;
   height: 48px;
   padding: 12px;
+  border-color: #aaa;
+}
+.post-text:hover {
+  border-color: #668ad8;
 }
 .post-button {
   margin: 0;
+  padding: 0 16px;
+  background-color: #346add;
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  transition: .4s;
+}
+.post-button:hover {
+  background-color: #668ad8;
 }
 /* 文字数カウンタ */
 .counter {
@@ -347,6 +375,8 @@ textarea {
 }
 .timeline-item-command {
   flex: 1;
+  display: flex;
+  flex-direction: row;
 }
 .timeline-command-item {
   width: 24px;
@@ -358,6 +388,9 @@ textarea {
 }
 .timeline-command-item:hover {
   background: #b3e1ff;
+}
+.timeline-command-item-favs-count {
+  margin: auto 4px;
 }
 
 /* 画面下部 */

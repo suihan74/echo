@@ -31,6 +31,7 @@ func initDatabase() {
 
     db.AutoMigrate(&User{})
     db.AutoMigrate(&Post{})
+    db.AutoMigrate(&Fav{})
 }
 
 type AuthHandlerFunc func(w http.ResponseWriter, r *http.Request, db *gorm.DB, user User)
@@ -109,7 +110,11 @@ func main() {
     // 投稿関連
     router.HandleFunc("/post", authMiddleware(postEndPoint)).Methods("POST")
     router.HandleFunc("/post", authMiddleware(deletePostEndPoint)).Methods("DELETE")
+    router.HandleFunc("/post", authMiddleware(getPostEndPoint)).Methods("GET")
     router.HandleFunc("/posts", authMiddleware(getPostsEndPoint)).Methods("GET")
+
+    // Fav関連
+    router.HandleFunc("/fav", authMiddleware(favoritePostEndPoint)).Methods("POST")
 
     // ユーザー関連
     router.HandleFunc("/user", authMiddleware(getUserEndPoint)).Methods("GET")
