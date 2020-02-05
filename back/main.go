@@ -8,15 +8,23 @@ import (
     "strings"
     "net/http"
 
+    // REST
     "github.com/gorilla/mux"
     "github.com/gorilla/handlers"
 
+    // websocket
+    "github.com/gorilla/websocket"
+
+    // firebase
     firebase "firebase.google.com/go"
     "google.golang.org/api/option"
 
+    // DB
     "github.com/jinzhu/gorm"
     _ "github.com/jinzhu/gorm/dialects/postgres"
 )
+
+////////////////////////////////////////////////////////////
 
 var db *gorm.DB
 
@@ -33,6 +41,8 @@ func initDatabase() {
     db.AutoMigrate(&Post{})
     db.AutoMigrate(&Fav{})
 }
+
+////////////////////////////////////////////////////////////
 
 type AuthHandlerFunc func(w http.ResponseWriter, r *http.Request, db *gorm.DB, user User)
 
@@ -96,6 +106,55 @@ func registerUser(userId string) User {
     return user
 }
 
+////////////////////////////////////////////////////////////
+// websocket
+
+var wsClients = make(map[*websocket.Conn]bool)
+var wsBroadcast = make(chan Message)
+var wsUpgrader = websocket.Upgrader{}
+
+type Message struct {
+    Message string `json:message`
+}
+
+func HandleWebSocketClients(w http.ResponseWriter, r *http.Request, db *gorm.DB, user User) {
+    go broadcastMessagesToWebSocketClients()
+    websocket, err := wsUpgrader.Upgrade(w, r, nil)
+    if err != nil {
+        log.Fatal("error uprading GET request to a websocket::", err)
+    }
+    defer websocket.Close()
+
+    wsClients[websocket] = true
+
+    for {
+        var message Message
+        err := websocket.ReadJSON(&message)
+        if err != nil {
+            log.Printf("error occurred while reading message: %v\n", err)
+            delete(wsClients, websocket)
+            break
+        }
+        wsBroadcast <- message
+    }
+}
+
+func broadcastMessagesToWebSocketClients() {
+    for {
+        message := <- wsBroadcast
+        for client := range wsClients {
+            err := client.WriteJSON(message)
+            if err != nil {
+                log.Printf("error occured while writing message to client: %v\n", err)
+                client.Close()
+                delete(wsClients, client)
+            }
+        }
+    }
+}
+
+////////////////////////////////////////////////////////////
+
 func main() {
     port := ":8000"
 
@@ -120,6 +179,9 @@ func main() {
 
     // ユーザー関連
     router.HandleFunc("/user", authMiddleware(getUserEndPoint)).Methods("GET")
+
+    // WebSocket接続
+    router.HandleFunc("/socket", authMiddleware(HandleWebSocketClients))
 
 ////// エンドポイントここまで //////
 
