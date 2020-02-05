@@ -80,6 +80,8 @@ web系ほぼ知らないので勉強しながらという感じなのでアレ�
 
 - [http status code](http://golang.jp/pkg/http)
 
+- [websocket](https://qiita.com/__init__/items/08cbc3a870178fd6fc32)
+
 ### js
 
 - [nodebrewをインストール](https://contents.shinonomekazan.com/tips/wsl-with-node.html#node-jsのインストール)
