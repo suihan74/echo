@@ -219,7 +219,7 @@ func getPostsEndPoint(w http.ResponseWriter, r *http.Request, db *gorm.DB, user 
 
     // 最新の投稿をN個まで取得する
     var posts []Post
-    db..Offset(offset).
+    db.Offset(offset).
         Limit(limit).
         Order("id desc").
         Find(&posts)
