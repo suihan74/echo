@@ -1,10 +1,8 @@
 package main
 
 import (
-    "context"
     "fmt"
     "log"
-    "os"
     "strings"
     "net/http"
 
@@ -14,10 +12,6 @@ import (
 
     // websocket
     "github.com/gorilla/websocket"
-
-    // firebase
-    firebase "firebase.google.com/go"
-    "google.golang.org/api/option"
 
     // DB
     "github.com/jinzhu/gorm"
@@ -53,41 +47,21 @@ type AuthHandlerFunc func(w http.ResponseWriter, r *http.Request, db *gorm.DB, u
  */
 func authMiddleware(next AuthHandlerFunc) http.HandlerFunc {
     return func(w http.ResponseWriter, r *http.Request) {
-        // Firebase SDK のセットアップ
-        opt := option.WithCredentialsFile(os.Getenv("CREDENTIALS"))
-        app, err := firebase.NewApp(context.Background(), nil, opt)
-        if err != nil {
-            fmt.Printf("error: %v\n", err)
-            os.Exit(1)
-        }
-
-        auth, err := app.Auth(context.Background())
-        if err != nil {
-            fmt.Printf("error: %v\n", err)
-            os.Exit(1)
-        }
-
         // クライアントから送られてきた JWT 取得
         authHeader := r.Header.Get("Authorization")
-        idToken := strings.Replace(authHeader, "Bearer ", "", 1)
+        jwt := strings.Replace(authHeader, "Bearer ", "", 1)
 
-        // JWT 検証
-        token, err := auth.VerifyIDTokenAndCheckRevoked(context.Background(), idToken)
+        // この部分キャッシュしたい
+        uid, err := verifyToken(jwt)
         if err != nil {
-            if err.Error() == "ID token has been revoked" {
-                fmt.Printf("ID token has been revoked: %v\n", err)
-                w.WriteHeader(http.StatusNonAuthoritativeInfo)
-                w.Write([]byte("error verifying ID token\n"))
-            } else {
-                fmt.Printf("error verifying ID token: %v\n", err)
-                w.WriteHeader(http.StatusUnauthorized)
-                w.Write([]byte("error verifying ID token\n"))
-            }
+            fmt.Printf("error verifying ID token: %v\n", err)
+            w.WriteHeader(http.StatusUnauthorized)
+            w.Write([]byte("error verifying ID token\n"))
             return
         }
 
         // ユーザー情報を登録する
-        user := registerUser(token.UID)
+        user := registerUser(uid)
 
         next(w, r, db, user)
     }
@@ -110,25 +84,24 @@ func registerUser(userId string) User {
 // websocket
 
 var wsClients = make(map[*websocket.Conn]bool)
-var wsBroadcast = make(chan Message)
-var wsUpgrader = websocket.Upgrader{}
+var wsBroadcast = make(chan WebSocketMessage)
+var wsUpgrader = websocket.Upgrader{ CheckOrigin: func(r *http.Request) bool { return true } }
 
-type Message struct {
-    Message string `json:message`
-}
+/** WebSocketひらく */
+func handleWebSocketClients(w http.ResponseWriter, r *http.Request) {
+    // TODO: 認証情報を扱うようにする
 
-func HandleWebSocketClients(w http.ResponseWriter, r *http.Request, db *gorm.DB, user User) {
     go broadcastMessagesToWebSocketClients()
     websocket, err := wsUpgrader.Upgrade(w, r, nil)
     if err != nil {
-        log.Fatal("error uprading GET request to a websocket::", err)
+        log.Fatal("error upgrading GET request to a websocket::", err)
     }
     defer websocket.Close()
 
     wsClients[websocket] = true
 
     for {
-        var message Message
+        var message WebSocketMessage
         err := websocket.ReadJSON(&message)
         if err != nil {
             log.Printf("error occurred while reading message: %v\n", err)
@@ -139,6 +112,7 @@ func HandleWebSocketClients(w http.ResponseWriter, r *http.Request, db *gorm.DB,
     }
 }
 
+/** WebSocketのメッセージがbroadcastされてきたときに接続中のクライアントにメッセージを配信する */
 func broadcastMessagesToWebSocketClients() {
     for {
         message := <- wsBroadcast
@@ -168,6 +142,9 @@ func main() {
 
 ////// エンドポイント //////
 
+    // 認証
+    router.HandleFunc("/auth", authMiddleware(signIn)).Methods("GET")
+
     // 投稿関連
     router.HandleFunc("/post", authMiddleware(postEndPoint)).Methods("POST")
     router.HandleFunc("/post", authMiddleware(deletePostEndPoint)).Methods("DELETE")
@@ -181,7 +158,7 @@ func main() {
     router.HandleFunc("/user", authMiddleware(getUserEndPoint)).Methods("GET")
 
     // WebSocket接続
-    router.HandleFunc("/socket", authMiddleware(HandleWebSocketClients))
+    router.HandleFunc("/socket", handleWebSocketClients)
 
 ////// エンドポイントここまで //////
 

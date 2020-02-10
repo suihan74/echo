@@ -18,6 +18,22 @@
 import * as firebase from 'firebase/app'
 import 'firebase/auth'
 
+import axios from 'axios'
+import { Service } from 'axios-middleware'
+
+// axiosに処理を挟み込む
+const service = new Service(axios)
+service.register({
+  onRequest (config) {
+    config.baseURL = 'http://localhost:8000'
+    if (config.auth) {
+      config.headers.Authorization = `Bearer ${config.auth}`
+      delete config.auth
+    }
+    return config
+  }
+})
+
 export default {
   name: 'Signin',
   data () {
@@ -30,11 +46,20 @@ export default {
     signIn: function () {
       firebase.auth().signInWithEmailAndPassword(this.email, this.password).then(res => {
         res.user.getIdToken().then(token => {
-          localStorage.setItem('jwt', token)
-          this.$router.push('/home')
+          this.signInServer(token)
         })
       }, err => {
         alert(err.message)
+      })
+    },
+
+    signInServer: function (token) {
+      axios.get('auth', { auth: token }).then(res => {
+        localStorage.setItem('jwt', token)
+        this.$router.push('/home')
+      }, err => {
+        alert(err.message)
+        localStorage.removeItem('jwt')
       })
     }
   }

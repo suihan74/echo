@@ -55,6 +55,21 @@ type Fav struct {
     Post Post
 }
 
+type WebSocketMessageType int
+const (
+    CREATE WebSocketMessageType = iota
+    DELETE
+    UPDATE
+)
+
+/**
+ * websocket用メッセージ
+ */
+type WebSocketMessage struct {
+    Type WebSocketMessageType `json:"type"`
+    Post Post `json:"post"`
+}
+
 ////////////////////////////////////////////////////////////
 
 /**
@@ -127,6 +142,8 @@ func postEndPoint(w http.ResponseWriter, r *http.Request, db *gorm.DB, user User
         db.Where("id = ?", post.QuoteId).Find(&quote)
         post.QuotePost = &quote
     }
+
+    wsBroadcast <- WebSocketMessage { Type: CREATE, Post: post }
 
     post.IsYours = true
 

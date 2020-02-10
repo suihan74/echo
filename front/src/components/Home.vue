@@ -68,11 +68,25 @@
   </div>
 </template>
 
-<script lang="ts">
-import axiosBase from 'axios'
+<script>
+import axios from 'axios'
+import { Service } from 'axios-middleware'
 import Moment from 'moment'
 import * as firebase from 'firebase/app'
 import 'firebase/auth'
+
+// axiosに処理を挟み込む
+const service = new Service(axios)
+service.register({
+  onRequest (config) {
+    config.baseURL = 'http://localhost:8000'
+    const token = localStorage.getItem('jwt')
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`
+    }
+    return config
+  }
+})
 
 export default {
   name: 'Home',
@@ -83,15 +97,8 @@ export default {
       posts: [],
       quote_post: null,
 
-      // 認証情報を含んだクライアントを作成
-      axios: axiosBase.create({
-        baseURL: 'http://localhost:8000',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('jwt')}`
-        },
-        responseType: 'json'
-      })
+      socket: null,
+      initialized: false
     }
   },
 
@@ -108,14 +115,11 @@ export default {
         quote_id: (this.quote_post ? this.quote_post.id : 0)
       }
 
-      this.axios.post('/post', null, {
-        params: data,
-        headers: this.axios.defaults.headers
-      }).then(res => {
+      axios.post('/post', null, { params: data }).then(res => {
         // 投稿後編集内容をクリアしてタイムラインを更新する
         this.post_text = ''
         this.quote_post = null
-        this.getPosts()
+        this.insertPost(res.data)
       }).catch(err => {
         console.error(err)
       })
@@ -123,7 +127,7 @@ export default {
 
     /** (自分の)投稿を削除する */
     deletePost: function (postId) {
-      this.axios.delete('/post?id=' + postId, this.axios.defaults.headers).then(res => {
+      axios.delete('/post?id=' + postId).then(res => {
         this.posts = this.posts.filter(p => p.id !== postId)
         console.log('deleted post: ' + postId)
       }).catch(err => {
@@ -133,7 +137,7 @@ export default {
 
     /** 最新の投稿を取得する */
     getPosts: function () {
-      this.axios.get('posts').then(res => {
+      axios.get('posts').then(res => {
         this.posts = res.data
       }).catch(err => {
         console.error(err)
@@ -142,7 +146,7 @@ export default {
 
     /** 投稿をお気に入りにする */
     favPost: function (postId) {
-      this.axios.post('/fav?id=' + postId, this.axios.defaults.headers).then(res => {
+      axios.post('/fav?id=' + postId).then(res => {
         console.log('favorite post: ' + postId)
       }).catch(err => {
         console.error(err)
@@ -178,12 +182,41 @@ export default {
     timeToString: function (unixtime) {
       const date = new Date(unixtime * 1000)
       return Moment(date).format('YYYY-MM-DD HH:mm:ss')
+    },
+
+    /** 良い感じにPostをTLに挿入 */
+    insertPost: function (post) {
+      const idx = this.posts.findIndex(p => p.id === post.id)
+      if (idx === -1) {
+        const insertIdx = this.posts.findIndex(p => p.id < post.id)
+        this.posts.splice(insertIdx, 0, post)
+      } else {
+        this.posts[idx] = post
+      }
     }
   },
 
   // ロード後にタイムラインを取得する
   mounted: function () {
-    this.getPosts()
+    if (!this.initialized) {
+      this.initialized = true
+
+      const inst = this
+      // websocket
+      this.socket = new WebSocket('ws://localhost:8000/socket')
+      this.socket.onopen = function (msg) {
+        console.log('socket opened')
+      }
+      this.socket.onmessage = function (msg) {
+        const data = JSON.parse(msg.data)
+        if (data.type === 0) {
+          inst.insertPost(data.post)
+        }
+      }
+
+      // TL更新
+      this.getPosts()
+    }
   }
 }
 </script>
