@@ -58,8 +58,8 @@ type Fav struct {
 type WebSocketMessageType int
 const (
     CREATE WebSocketMessageType = iota
-    DELETE
     UPDATE
+    DELETE
 )
 
 /**
@@ -178,6 +178,8 @@ func deletePostEndPoint(w http.ResponseWriter, r *http.Request, db *gorm.DB, use
     db.Delete(Post{}, "id = ?", postId)
     // favs table
     db.Delete(Fav{}, "post_id = ?", postId)
+
+    wsBroadcast <- WebSocketMessage { Type: DELETE, Post: post }
 
     // 結果を返す
     w.WriteHeader(http.StatusOK)

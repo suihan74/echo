@@ -128,7 +128,6 @@ export default {
     /** (自分の)投稿を削除する */
     deletePost: function (postId) {
       axios.delete('/post?id=' + postId).then(res => {
-        this.posts = this.posts.filter(p => p.id !== postId)
         console.log('deleted post: ' + postId)
       }).catch(err => {
         console.error(err)
@@ -185,13 +184,23 @@ export default {
     },
 
     /** 良い感じにPostをTLに挿入 */
-    insertPost: function (post) {
+    insertTimelineItem: function (post) {
       const idx = this.posts.findIndex(p => p.id === post.id)
       if (idx === -1) {
+        // 追加
         const insertIdx = this.posts.findIndex(p => p.id < post.id)
         this.posts.splice(insertIdx, 0, post)
       } else {
-        this.posts[idx] = post
+        // 更新
+        this.posts.splice(idx, 1, post)
+      }
+    },
+
+    /** Postをタイムラインから削除 */
+    removeTimelineItem: function (post) {
+      const idx = this.posts.findIndex(p => p.id === post.id)
+      if (idx !== -1) {
+        this.posts.splice(idx, 1)
       }
     }
   },
@@ -209,8 +218,12 @@ export default {
       }
       this.socket.onmessage = function (msg) {
         const data = JSON.parse(msg.data)
-        if (data.type === 0) {
-          inst.insertPost(data.post)
+        if (data.type === 0 || data.type === 1) {
+          // 追加・更新
+          inst.insertTimelineItem(data.post)
+        } else if (data.type === 2) {
+          // 消去
+          inst.removeTimelineItem(data.post)
         }
       }
 
