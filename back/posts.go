@@ -237,7 +237,7 @@ func getPostsEndPoint(w http.ResponseWriter, r *http.Request, db *gorm.DB, user 
             posts[idx].FavoritedCount = 0
         }
 
-       getQuotePost(&posts[idx])
+        getQuotePost(&posts[idx])
     }
 
     json.NewEncoder(w).Encode(posts)
