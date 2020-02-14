@@ -35,7 +35,7 @@ type Post struct {
     /** 引用対象ID */
     QuoteId int64 `json:"quote_id"`
     /** 引用対象ポスト */
-    QuotePost *Post `json:"quote_post" gorm:"foreignkey:QuoteId"`
+    QuotePost *Post `json:"quote_post" gorm:"ForeignKey:QuoteId;AssociationForeignKey:Id;"`
 
     /** 被Fav数 */
     FavoritedCount int64 `json:"favorited_count"`
@@ -52,7 +52,17 @@ type Fav struct {
     PostId int64
 
     /** 投稿 */
-    Post Post
+    Post Post `gorm:"ForeignKey:PostId;AssociationForeignKey:Id;"`
+}
+
+////////////////////////////////////////////////////////////
+
+func getQuotePost(post *Post) {
+    if post.QuoteId != 0 {
+        var quotePost Post
+        db.Model(post).Related(&quotePost, "QuoteId")
+        post.QuotePost = &quotePost
+    }
 }
 
 ////////////////////////////////////////////////////////////
@@ -121,12 +131,7 @@ func postEndPoint(w http.ResponseWriter, r *http.Request, db *gorm.DB, user User
         Timestamp: time.Now().Unix() }
     db.Create(&post)
 
-    // 引用先を探す
-    if post.QuoteId != 0 {
-        var quote Post
-        db.Where("id = ?", post.QuoteId).Find(&quote)
-        post.QuotePost = &quote
-    }
+    getQuotePost(&post)
 
     wsBroadcast <- WebSocketMessage { Type: CREATE, Post: post }
 
@@ -232,13 +237,7 @@ func getPostsEndPoint(w http.ResponseWriter, r *http.Request, db *gorm.DB, user 
             posts[idx].FavoritedCount = 0
         }
 
-        if p.QuoteId != 0 {
-            var quote Post
-            db.Where("id = ?", p.QuoteId).First(&quote)
-            if quote.Id != 0 {
-                posts[idx].QuotePost = &quote
-            }
-        }
+       getQuotePost(&posts[idx])
     }
 
     json.NewEncoder(w).Encode(posts)
@@ -275,16 +274,60 @@ func getMyPostsEndPoint(w http.ResponseWriter, r *http.Request, db *gorm.DB, use
         Order("id desc").
         Find(&posts)
 
-    for idx, p := range posts {
+    for idx := range posts {
         posts[idx].IsYours = true
+        getQuotePost(&posts[idx])
+    }
 
-        if p.QuoteId != 0 {
-            var quote Post
-            db.Where("id = ?", p.QuoteId).First(&quote)
-            if quote.Id != 0 {
-                posts[idx].QuotePost = &quote
-            }
+    json.NewEncoder(w).Encode(posts)
+}
+
+/**
+ * お気に入りの投稿を取得する
+ *
+ * GET /fav
+ *
+ * params
+ * - limit: int32 (default = 20)
+ * - offset: int32 (default = 0)
+ *
+ * response: []Post
+ */
+func getFavoritesEndPoint(w http.ResponseWriter, r *http.Request, db *gorm.DB, user User) {
+    var limit, offset int64 = 20, 0
+
+    limitStr, err := getQueryParam(r, "limit")
+    if err == nil {
+        limit, err = strconv.ParseInt(limitStr, 10, 32)
+    }
+
+    offsetStr, err := getQueryParam(r, "offset")
+    if err == nil {
+        offset, err = strconv.ParseInt(offsetStr, 10, 32)
+    }
+
+    var favs []Fav
+    db.Where("user_id = ?", user.Id).
+        Offset(offset).
+        Limit(limit).
+        Order("post_id desc").
+        Select("DISTINCT(post_id)").
+        Find(&favs)
+
+    var posts []Post
+
+    for _, fav := range favs {
+        db.Model(&fav).Related(&fav.Post, "PostId")
+
+        post := fav.Post
+        post.IsYours = fav.Post.UserId == user.Id
+        if !post.IsYours {
+            post.FavoritedCount = 0
         }
+
+        getQuotePost(&post)
+
+        posts = append(posts, post)
     }
 
     json.NewEncoder(w).Encode(posts)
@@ -316,6 +359,8 @@ func favoritePostEndPoint(w http.ResponseWriter, r *http.Request, db *gorm.DB, u
 
     db.Model(&post).UpdateColumn("FavoritedCount", post.FavoritedCount + 1)
     db.Create(&fav)
+
+    getQuotePost(&post)
 
     wsBroadcast <- WebSocketMessage { Type: UPDATE, Post: post }
 }
