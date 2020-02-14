@@ -6,6 +6,14 @@
 
 ![現況](https://github.com/suihan74/echo/wiki/images/ss_3.png "2020/02/02")
 
+### 2020/02/15
+
+- WebSocketの接続open時にユーザー認証するようにした
+
+    - とりあえずopen時にjwt投げるようにした
+    
+    - リアルタイム配信されるPost情報を配信先のユーザーごとに修正するようにできた
+
 ### 2020/02/10
 
 - WebSocketでTLをリアルタイム更新するようにした
