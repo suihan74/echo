@@ -55,21 +55,6 @@ type Fav struct {
     Post Post
 }
 
-type WebSocketMessageType int
-const (
-    CREATE WebSocketMessageType = iota
-    UPDATE
-    DELETE
-)
-
-/**
- * websocket用メッセージ
- */
-type WebSocketMessage struct {
-    Type WebSocketMessageType `json:"type"`
-    Post Post `json:"post"`
-}
-
 ////////////////////////////////////////////////////////////
 
 /**
@@ -211,7 +196,6 @@ func getPostEndPoint(w http.ResponseWriter, r *http.Request, db *gorm.DB, user U
     }
 }
 
-
 /**
  * 最近の投稿を取得する
  *
@@ -236,7 +220,6 @@ func getPostsEndPoint(w http.ResponseWriter, r *http.Request, db *gorm.DB, user 
         offset, err = strconv.ParseInt(offsetStr, 10, 32)
     }
 
-    // 最新の投稿をN個まで取得する
     var posts []Post
     db.Offset(offset).
         Limit(limit).
@@ -248,6 +231,52 @@ func getPostsEndPoint(w http.ResponseWriter, r *http.Request, db *gorm.DB, user 
         if !posts[idx].IsYours {
             posts[idx].FavoritedCount = 0
         }
+
+        if p.QuoteId != 0 {
+            var quote Post
+            db.Where("id = ?", p.QuoteId).First(&quote)
+            if quote.Id != 0 {
+                posts[idx].QuotePost = &quote
+            }
+        }
+    }
+
+    json.NewEncoder(w).Encode(posts)
+}
+
+/**
+ * ユーザーの最近の投稿を取得する
+ *
+ * GET /myposts
+ *
+ * params  
+ * - limit: int32 (default = 20)
+ * - offset: int32 (default = 0)
+ *
+ * response: []Post
+ */
+func getMyPostsEndPoint(w http.ResponseWriter, r *http.Request, db *gorm.DB, user User) {
+    var limit, offset int64 = 20, 0
+
+    limitStr, err := getQueryParam(r, "limit")
+    if err == nil {
+        limit, err = strconv.ParseInt(limitStr, 10, 32)
+    }
+
+    offsetStr, err := getQueryParam(r, "offset")
+    if err == nil {
+        offset, err = strconv.ParseInt(offsetStr, 10, 32)
+    }
+
+    var posts []Post
+    db.Where("user_id = ?", user.Id).
+        Offset(offset).
+        Limit(limit).
+        Order("id desc").
+        Find(&posts)
+
+    for idx, p := range posts {
+        posts[idx].IsYours = true
 
         if p.QuoteId != 0 {
             var quote Post
@@ -287,4 +316,6 @@ func favoritePostEndPoint(w http.ResponseWriter, r *http.Request, db *gorm.DB, u
 
     db.Model(&post).UpdateColumn("FavoritedCount", post.FavoritedCount + 1)
     db.Create(&fav)
+
+    wsBroadcast <- WebSocketMessage { Type: UPDATE, Post: post }
 }

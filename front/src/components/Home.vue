@@ -212,11 +212,14 @@ export default {
 
       const inst = this
       // websocket
-      this.socket = new WebSocket('ws://localhost:8000/socket')
-      this.socket.onopen = function (msg) {
+      const socket = new WebSocket('ws://localhost:8000/socket')
+      socket.onopen = function (msg) {
         console.log('socket opened')
+        socket.send(JSON.stringify({
+          token: localStorage.getItem('jwt')
+        }))
       }
-      this.socket.onmessage = function (msg) {
+      socket.onmessage = function (msg) {
         const data = JSON.parse(msg.data)
         if (data.type === 0 || data.type === 1) {
           // 追加・更新
@@ -226,6 +229,7 @@ export default {
           inst.removeTimelineItem(data.post)
         }
       }
+      this.socket = socket
 
       // TL更新
       this.getPosts()

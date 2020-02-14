@@ -83,7 +83,29 @@ func registerUser(userId string) User {
 ////////////////////////////////////////////////////////////
 // websocket
 
-var wsClients = make(map[*websocket.Conn]bool)
+type WebSocketMessageType int
+const (
+    CREATE WebSocketMessageType = iota
+    UPDATE
+    DELETE
+)
+
+/**
+ * websocket用メッセージ
+ */
+type WebSocketMessage struct {
+    Type WebSocketMessageType `json:"type"`
+    Post Post `json:"post"`
+}
+
+/**
+ * websocketユーザー認証用メッセージ
+ */
+type WebSocketAuthMessage struct {
+    Token string `json:"token"`
+}
+
+var wsClients = make(map[*websocket.Conn]User)
 var wsBroadcast = make(chan WebSocketMessage)
 var wsUpgrader = websocket.Upgrader{ CheckOrigin: func(r *http.Request) bool { return true } }
 
@@ -92,32 +114,70 @@ func handleWebSocketClients(w http.ResponseWriter, r *http.Request) {
     // TODO: 認証情報を扱うようにする
 
     go broadcastMessagesToWebSocketClients()
-    websocket, err := wsUpgrader.Upgrade(w, r, nil)
+    client, err := wsUpgrader.Upgrade(w, r, nil)
     if err != nil {
         log.Fatal("error upgrading GET request to a websocket::", err)
     }
-    defer websocket.Close()
+    defer client.Close()
 
-    wsClients[websocket] = true
-
+    // ユーザー認証を待機する
     for {
-        var message WebSocketMessage
-        err := websocket.ReadJSON(&message)
+        var message WebSocketAuthMessage
+        err := client.ReadJSON(&message)
         if err != nil {
-            log.Printf("error occurred while reading message: %v\n", err)
-            delete(wsClients, websocket)
+            log.Printf("error occurred while authorization: %v\n", err)
+            delete(wsClients, client)
+            return
+        }
+
+        uid, err := verifyToken(message.Token)
+        if err != nil {
+            fmt.Printf("error verifying ID token: %v\n", err)
+            w.WriteHeader(http.StatusUnauthorized)
+            w.Write([]byte("error verifying ID token\n"))
+            delete(wsClients, client)
+            return
+        } else {
+            // ユーザー情報を登録する
+            user := registerUser(uid)
+            wsClients[client] = user
             break
         }
-        wsBroadcast <- message
     }
+
+    // 通信終了を待機
+    for {
+        _, _, err := client.ReadMessage()
+        if err != nil {
+            if !websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
+                log.Printf("WebSocket error: %v\n", err)
+            }
+            break
+        }
+    }
+    delete(wsClients, client)
 }
 
 /** WebSocketのメッセージがbroadcastされてきたときに接続中のクライアントにメッセージを配信する */
 func broadcastMessagesToWebSocketClients() {
     for {
         message := <- wsBroadcast
-        for client := range wsClients {
-            err := client.WriteJSON(message)
+        
+        // 投稿ユーザーに配信するPost
+        postForUser := message.Post
+        postForUser.IsYours = true
+        msgForUser := WebSocketMessage { Type: message.Type, Post: postForUser }
+
+        // 投稿ユーザー以外のユーザーに配信するPost
+        postForOthers := message.Post
+        postForOthers.IsYours = false
+        postForOthers.FavoritedCount = 0
+        msgForOthers := WebSocketMessage { Type: message.Type, Post: postForOthers }
+
+        msg := map[bool]WebSocketMessage { true: msgForUser, false: msgForOthers }
+
+        for client, user := range wsClients {
+            err := client.WriteJSON(msg[user.Id == message.Post.UserId])
             if err != nil {
                 log.Printf("error occured while writing message to client: %v\n", err)
                 client.Close()
