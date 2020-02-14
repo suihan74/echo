@@ -111,8 +111,6 @@ var wsUpgrader = websocket.Upgrader{ CheckOrigin: func(r *http.Request) bool { r
 
 /** WebSocketひらく */
 func handleWebSocketClients(w http.ResponseWriter, r *http.Request) {
-    // TODO: 認証情報を扱うようにする
-
     go broadcastMessagesToWebSocketClients()
     client, err := wsUpgrader.Upgrade(w, r, nil)
     if err != nil {
@@ -133,8 +131,6 @@ func handleWebSocketClients(w http.ResponseWriter, r *http.Request) {
         uid, err := verifyToken(message.Token)
         if err != nil {
             fmt.Printf("error verifying ID token: %v\n", err)
-            w.WriteHeader(http.StatusUnauthorized)
-            w.Write([]byte("error verifying ID token\n"))
             delete(wsClients, client)
             return
         } else {
@@ -149,7 +145,7 @@ func handleWebSocketClients(w http.ResponseWriter, r *http.Request) {
     for {
         _, _, err := client.ReadMessage()
         if err != nil {
-            if !websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
+            if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
                 log.Printf("WebSocket error: %v\n", err)
             }
             break
