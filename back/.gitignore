@@ -16,3 +16,5 @@
 
 # firebase key
 echo-sns-firebase-adminsdk.json
+
+go.sum
