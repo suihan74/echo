@@ -84,9 +84,8 @@ func detectUserPost(post *Post, user User) {
 
 ////////////////////////////////////////////////////////////
 
-/**
- * 指定keyのクエリパラメータを取得する
- */
+// getQueryParam
+// 指定keyのクエリパラメータを取得する
 func getQueryParam(r *http.Request, key string) (string, error) {
 	params, ok := r.URL.Query()[key]
 
@@ -169,16 +168,8 @@ func postEndPoint(w http.ResponseWriter, r *http.Request, db *gorm.DB, user User
 	if err := setQuotePost(&post, db); check(w, err != nil, "posting failure: missing quote_id") {
 		return
 	}
-	if err != nil {
-		quoteID = 0
-	}
 
 	// DBに登録
-	var post = Post{
-		Text:      text,
-		QuoteID:   quoteID,
-		UserID:    user.ID,
-		Timestamp: time.Now().Unix()}
 	db.Create(&post)
 
 	// 配信
@@ -276,9 +267,6 @@ func getPostsEndPoint(w http.ResponseWriter, r *http.Request, db *gorm.DB, user 
 		setQuotePost(&posts[idx], db)
 	}
 
-		getQuotePost(&posts[idx])
-	}
-
 	json.NewEncoder(w).Encode(posts)
 }
 
@@ -296,16 +284,6 @@ func getPostsEndPoint(w http.ResponseWriter, r *http.Request, db *gorm.DB, user 
 func getMyPostsEndPoint(w http.ResponseWriter, r *http.Request, db *gorm.DB, user User) {
 	limit := getIntQueryParam(r, "limit", 64, 20)
 	offset := getIntQueryParam(r, "offset", 64, 0)
-
-	limitStr, err := getQueryParam(r, "limit")
-	if err == nil {
-		limit, err = strconv.ParseInt(limitStr, 10, 32)
-	}
-
-	offsetStr, err := getQueryParam(r, "offset")
-	if err == nil {
-		offset, err = strconv.ParseInt(offsetStr, 10, 32)
-	}
 
 	var posts []Post
 	db.Where("user_id = ?", user.ID).
