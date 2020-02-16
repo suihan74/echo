@@ -62,9 +62,10 @@ type Fav struct {
 // setQuotePost
 // postが引用しているPostを取得してセットする
 func setQuotePost(post *Post, db *gorm.DB) error {
-	if post.QuoteID != 0 {
+	if post.QuoteID > 0 {
 		var quotePost Post
 		if db.Model(post).Related(&quotePost, "QuoteID").RecordNotFound() {
+			post.QuotePost = nil
 			return fmt.Errorf("invalid QuoteID")
 		}
 		post.QuotePost = &quotePost
@@ -165,17 +166,14 @@ func postEndPoint(w http.ResponseWriter, r *http.Request, db *gorm.DB, user User
 		UserID:    user.ID,
 		Timestamp: time.Now().Unix()}
 
-	if err := setQuotePost(&post, db); check(w, err != nil, "posting failure: missing quote_id") {
-		return
-	}
-
 	// DBに登録
 	db.Create(&post)
 
+	setQuotePost(&post, db)
+	post.IsYours = true
+
 	// 配信
 	wsBroadcast <- WebSocketMessage{Type: CREATE, Post: post}
-
-	post.IsYours = true
 
 	// 結果を返す
 	json.NewEncoder(w).Encode(post)
