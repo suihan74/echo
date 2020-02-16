@@ -68,6 +68,12 @@ web系ほぼ知らないので勉強しながらという感じなのでアレ�
 
 ## ローカルで動かすやつ
 
+### 実行環境構築手順
+
+[echoの実行環境構築メモ - すいはんぶろぐ.io](https://suihan74.github.io/posts/2020/02_09_00_web_dev_installation_tips/)
+
+### 実行手順
+
 1. `sudo service postgresql start`する
 
 2. /backで`go run *.go`する
