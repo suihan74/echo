@@ -309,11 +309,57 @@ func getMyPostsEndPoint(w http.ResponseWriter, r *http.Request, db *gorm.DB, use
 
 	for idx := range posts {
 		posts[idx].IsYours = true
-		getQuotePost(&posts[idx])
+		setQuotePost(&posts[idx], db)
 	}
 
 	json.NewEncoder(w).Encode(posts)
 }
+
+////////////////////////////////////////////////////////////
+
+/* getQuotesEndPoint
+指定した投稿から辿れる引用先Postを大元まで辿る
+
+GET /quotes
+
+params
+- id int64 : (required) postID
+- full bool : (optional) get full posts which contain .QuotePost (default = false)
+
+response: []Post
+*/
+func getQuotesEndPoint(w http.ResponseWriter, r *http.Request, db *gorm.DB, user User) {
+	var posts []Post
+
+	postID := getIntQueryParam(r, "id", 64, 0)
+	isFull := getBoolQueryParam(r, "full", false)
+
+	for postID > 0 {
+		var post Post
+		if db.Find(&post, "id = ?", postID).RecordNotFound() {
+			break
+		}
+		post.IsYours = post.UserID == user.ID
+
+		posts = append(posts, post)
+
+		postID = post.QuoteID
+	}
+
+	if isFull {
+		limit := len(posts)
+		for idx := range posts {
+			next := idx + 1
+			if next < limit {
+				posts[idx].QuotePost = &posts[next]
+			}
+		}
+	}
+
+	json.NewEncoder(w).Encode(posts)
+}
+
+////////////////////////////////////////////////////////////
 
 /**
  * お気に入りの投稿を取得する

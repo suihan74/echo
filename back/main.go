@@ -207,6 +207,8 @@ func main() {
 	router.HandleFunc("/post", authMiddleware(getPostEndPoint)).Methods("GET")
 	router.HandleFunc("/posts", authMiddleware(getPostsEndPoint)).Methods("GET")
 
+	router.HandleFunc("/quotes", authMiddleware(getQuotesEndPoint)).Methods("GET")
+
 	// Fav関連
 	router.HandleFunc("/favs", authMiddleware(getFavoritesEndPoint)).Methods("GET")
 	router.HandleFunc("/fav", authMiddleware(favoritePostEndPoint)).Methods("POST")
