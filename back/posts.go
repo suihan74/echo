@@ -53,11 +53,26 @@ type Fav struct {
 
 ////////////////////////////////////////////////////////////
 
-func getQuotePost(post *Post) {
+// setQuotePost
+// postが引用しているPostを取得してセットする
+func setQuotePost(post *Post, db *gorm.DB) error {
 	if post.QuoteID != 0 {
 		var quotePost Post
-		db.Model(post).Related(&quotePost, "QuoteID")
+		if db.Model(post).Related(&quotePost, "QuoteID").RecordNotFound() {
+			return fmt.Errorf("invalid QuoteID")
+		}
 		post.QuotePost = &quotePost
+	}
+	return nil
+}
+
+// detectUserPost
+// postがユーザーが投稿したものかを判別して.IsYoursをセットし、
+// 他のユーザーの投稿である場合は幾つかの情報を秘匿する
+func detectUserPost(post *Post, user User) {
+	post.IsYours = post.UserID == user.ID
+	if !post.IsYours {
+		post.FavoritedCount = 0
 	}
 }
 
@@ -74,6 +89,37 @@ func getQueryParam(r *http.Request, key string) (string, error) {
 	}
 
 	return params[0], nil
+}
+
+// getIntQueryParam
+// 指定keyのクエリパラメータをint値としてパースする
+func getIntQueryParam(r *http.Request, key string, bitSize int, defaultValue int64) int64 {
+	str, err := getQueryParam(r, key)
+	if err != nil {
+		return defaultValue
+	}
+	result, err := strconv.ParseInt(str, 10, bitSize)
+	if err != nil {
+		return defaultValue
+	}
+	return result
+}
+
+// getBoolQueryParam
+// 指定keyのクエリパラメータをbool値としてパースする
+func getBoolQueryParam(r *http.Request, key string, defaultValue bool) bool {
+	str, err := getQueryParam(r, key)
+	if err != nil {
+		return defaultValue
+	}
+
+	if str == "true" || str == "1" {
+		return true
+	} else if str == "false" || str == "0" {
+		return false
+	} else {
+		return defaultValue
+	}
 }
 
 /**
@@ -148,8 +194,8 @@ func postEndPoint(w http.ResponseWriter, r *http.Request, db *gorm.DB, user User
  * response: 200(OK) or 400(BadRequest)
  */
 func deletePostEndPoint(w http.ResponseWriter, r *http.Request, db *gorm.DB, user User) {
-	postID, err := getQueryParam(r, "id")
-	if check(w, err != nil, "deleting a post failure") {
+	postID := getIntQueryParam(r, "id", 64, 0)
+	if check(w, postID == 0, "deleting a post failure") {
 		return
 	}
 
@@ -183,8 +229,8 @@ func deletePostEndPoint(w http.ResponseWriter, r *http.Request, db *gorm.DB, use
  * response: 200(json of the post) or 400
  */
 func getPostEndPoint(w http.ResponseWriter, r *http.Request, db *gorm.DB, user User) {
-	postID, err := getQueryParam(r, "id")
-	if check(w, err != nil, "favoriting a post failure") {
+	postID := getIntQueryParam(r, "id", 64, 0)
+	if check(w, postID == 0, "favoriting a post failure") {
 		return
 	}
 
@@ -209,17 +255,8 @@ func getPostEndPoint(w http.ResponseWriter, r *http.Request, db *gorm.DB, user U
  * response: []Post
  */
 func getPostsEndPoint(w http.ResponseWriter, r *http.Request, db *gorm.DB, user User) {
-	var limit, offset int64 = 20, 0
-
-	limitStr, err := getQueryParam(r, "limit")
-	if err == nil {
-		limit, err = strconv.ParseInt(limitStr, 10, 32)
-	}
-
-	offsetStr, err := getQueryParam(r, "offset")
-	if err == nil {
-		offset, err = strconv.ParseInt(offsetStr, 10, 32)
-	}
+	limit := getIntQueryParam(r, "limit", 64, 20)
+	offset := getIntQueryParam(r, "offset", 64, 0)
 
 	var posts []Post
 	db.Offset(offset).
@@ -227,11 +264,10 @@ func getPostsEndPoint(w http.ResponseWriter, r *http.Request, db *gorm.DB, user 
 		Order("id desc").
 		Find(&posts)
 
-	for idx, p := range posts {
-		posts[idx].IsYours = p.UserID == user.ID
-		if !posts[idx].IsYours {
-			posts[idx].FavoritedCount = 0
-		}
+	for idx := range posts {
+		detectUserPost(&posts[idx], user)
+		setQuotePost(&posts[idx], db)
+	}
 
 		getQuotePost(&posts[idx])
 	}
@@ -245,13 +281,14 @@ func getPostsEndPoint(w http.ResponseWriter, r *http.Request, db *gorm.DB, user 
  * GET /myposts
  *
  * params
- * - limit: int32 (default = 20)
- * - offset: int32 (default = 0)
+ * - limit: int64 (default = 20)
+ * - offset: int64 (default = 0)
  *
  * response: []Post
  */
 func getMyPostsEndPoint(w http.ResponseWriter, r *http.Request, db *gorm.DB, user User) {
-	var limit, offset int64 = 20, 0
+	limit := getIntQueryParam(r, "limit", 64, 20)
+	offset := getIntQueryParam(r, "offset", 64, 0)
 
 	limitStr, err := getQueryParam(r, "limit")
 	if err == nil {
@@ -290,17 +327,8 @@ func getMyPostsEndPoint(w http.ResponseWriter, r *http.Request, db *gorm.DB, use
  * response: []Post
  */
 func getFavoritesEndPoint(w http.ResponseWriter, r *http.Request, db *gorm.DB, user User) {
-	var limit, offset int64 = 20, 0
-
-	limitStr, err := getQueryParam(r, "limit")
-	if err == nil {
-		limit, err = strconv.ParseInt(limitStr, 10, 32)
-	}
-
-	offsetStr, err := getQueryParam(r, "offset")
-	if err == nil {
-		offset, err = strconv.ParseInt(offsetStr, 10, 32)
-	}
+	limit := getIntQueryParam(r, "limit", 64, 20)
+	offset := getIntQueryParam(r, "offset", 64, 0)
 
 	var favs []Fav
 	db.Where("user_id = ?", user.ID).
@@ -316,12 +344,8 @@ func getFavoritesEndPoint(w http.ResponseWriter, r *http.Request, db *gorm.DB, u
 		db.Model(&fav).Related(&fav.Post, "PostID")
 
 		post := fav.Post
-		post.IsYours = fav.Post.UserID == user.ID
-		if !post.IsYours {
-			post.FavoritedCount = 0
-		}
-
-		getQuotePost(&post)
+		detectUserPost(&post, user)
+		setQuotePost(&post, db)
 
 		posts = append(posts, post)
 	}
@@ -338,8 +362,8 @@ func getFavoritesEndPoint(w http.ResponseWriter, r *http.Request, db *gorm.DB, u
  * - id: int64 (required)
  */
 func favoritePostEndPoint(w http.ResponseWriter, r *http.Request, db *gorm.DB, user User) {
-	postID, err := getQueryParam(r, "id")
-	if check(w, err != nil, "favoriting a post failure") {
+	postID := getIntQueryParam(r, "id", 64, 0)
+	if check(w, postID == 0, "favoriting a post failure") {
 		return
 	}
 
@@ -356,7 +380,7 @@ func favoritePostEndPoint(w http.ResponseWriter, r *http.Request, db *gorm.DB, u
 	db.Model(&post).UpdateColumn("FavoritedCount", post.FavoritedCount+1)
 	db.Create(&fav)
 
-	getQuotePost(&post)
+	setQuotePost(&post, db)
 
 	wsBroadcast <- WebSocketMessage{Type: UPDATE, Post: post}
 }
