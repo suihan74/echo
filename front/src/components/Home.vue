@@ -115,7 +115,7 @@ export default {
         quote_id: (this.quote_post ? this.quote_post.id : 0)
       }
 
-      axios.post('/post', null, { params: data }).then(res => {
+      axios.post('/post', data).then(res => {
         // 投稿後編集内容をクリアしてタイムラインを更新する
         this.post_text = ''
         this.quote_post = null

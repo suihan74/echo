@@ -13,6 +13,12 @@ import (
 
 ////////////////////////////////////////////////////////////
 
+// PostRequest 投稿時にPOSTされてくるjsonデータ
+type PostRequest struct {
+	Text    string `json:"text"`
+	QuoteID int64  `json:"quote_id"`
+}
+
 // Post 投稿内容
 type Post struct {
 	/** 投稿ID */
@@ -140,26 +146,28 @@ func check(w http.ResponseWriter, isError bool, msg string) bool {
 /**
  * 投稿する
  *
- * POST /post?text=hoge&quote_id=1234
+ * POST /post
  *
- * params
+ * params (json)
  * - text: string (required)
  * - quote_id: int64 (optional, default = 0 (equals to nil))
  *
  * reqsponse: Post
  */
 func postEndPoint(w http.ResponseWriter, r *http.Request, db *gorm.DB, user User) {
-	var err error
-	text, err := getQueryParam(r, "text")
-	if check(w, err != nil, "posting failure") {
+	var data PostRequest
+	if err := json.NewDecoder(r.Body).Decode(&data); check(w, err != nil, "posting failure") {
 		return
 	}
 
-	var quoteID int64
-	var quoteIDStr string
-	quoteIDStr, err = getQueryParam(r, "quote_id")
-	if err == nil {
-		quoteID, err = strconv.ParseInt(quoteIDStr, 10, 64)
+	var post = Post{
+		Text:      data.Text,
+		QuoteID:   data.QuoteID,
+		UserID:    user.ID,
+		Timestamp: time.Now().Unix()}
+
+	if err := setQuotePost(&post, db); check(w, err != nil, "posting failure: missing quote_id") {
+		return
 	}
 	if err != nil {
 		quoteID = 0
@@ -173,8 +181,7 @@ func postEndPoint(w http.ResponseWriter, r *http.Request, db *gorm.DB, user User
 		Timestamp: time.Now().Unix()}
 	db.Create(&post)
 
-	getQuotePost(&post)
-
+	// 配信
 	wsBroadcast <- WebSocketMessage{Type: CREATE, Post: post}
 
 	post.IsYours = true
