@@ -133,12 +133,12 @@ func handleWebSocketClients(w http.ResponseWriter, r *http.Request) {
 			fmt.Printf("error verifying ID token: %v\n", err)
 			delete(wsClients, client)
 			return
-		} else {
-			// ユーザー情報を登録する
-			user := registerUser(uid)
-			wsClients[client] = user
-			break
 		}
+
+		// ユーザー情報を登録する
+		user := registerUser(uid)
+		wsClients[client] = user
+		break
 	}
 
 	// 通信終了を待機
