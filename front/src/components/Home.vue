@@ -119,7 +119,6 @@ export default {
         // 投稿後編集内容をクリアしてタイムラインを更新する
         this.post_text = ''
         this.quote_post = null
-        this.insertPost(res.data)
       }).catch(err => {
         console.error(err)
       })
@@ -164,8 +163,9 @@ export default {
     },
 
     clickPost: function (post) {
+      console.log('id: ' + post.id)
       console.log('text: ' + post.text)
-      console.log('quote: ' + post.quote_post)
+      console.log('quote_id: ' + post.quote_id)
       console.log('favs: ' + post.favorited_count)
       console.log('is_yours: ' + post.is_yours)
     },
