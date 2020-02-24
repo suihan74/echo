@@ -1,7 +1,7 @@
 #!/bin/sh
 
-if [ -x backend ]; then
-	./backend
+if [ -x "$HOME/backend" ]; then
+	"$HOME/backend"
 else
-	go run *.go
+	go run "*.go"
 fi
