@@ -11,7 +11,7 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - postgres:/var/lib/postgres
+      - postgres:/var/lib/postgresql/data
     network_mode: host
 
   backend:
