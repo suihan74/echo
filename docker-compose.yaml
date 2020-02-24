@@ -31,9 +31,9 @@ services:
   frontend:
     image: local/echo-frontend:latest
     environment:
-      HOST: 0.0.0.0
-      PORT: 8080
-      NODE_ENV: development
+      - "HOST=0.0.0.0"
+      - "PORT=8080"
+      - "NODE_ENV=development"
     build:
       context: ./front
       dockerfile: Dockerfile
