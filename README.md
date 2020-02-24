@@ -82,6 +82,14 @@ web系ほぼ知らないので勉強しながらという感じなのでアレ�
 
 4. localhost:8080を開く
 
+### Docker でやる場合
+1. `docker-compose build` する
+
+2. `docker-compose up -d` する
+
+3. localhost:8080を開く
+
+
 ## 参考
 
 ### Go
