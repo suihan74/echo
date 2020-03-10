@@ -39,15 +39,19 @@
 </template>
 
 <script lang="ts">
-export default {
-  name: 'Top',
-  methods: {
-    signIn: async function () {
-      this.$router.push('/signin')
-    },
-    signUp: async function () {
-      this.$router.push('/signup')
-    }
+import { Component, Vue } from 'vue-property-decorator'
+import router from '../router'
+
+@Component
+export default class Top extends Vue {
+  name = 'Top'
+
+  async signIn () {
+    router.push('/signin')
+  }
+
+  async signUp () {
+    router.push('/signup')
   }
 }
 </script>

@@ -14,7 +14,10 @@
   </div>
 </template>
 
-<script>
+<script lang="ts">
+import { Component, Vue } from 'vue-property-decorator'
+import router from '../router'
+
 import * as firebase from 'firebase/app'
 import 'firebase/auth'
 
@@ -34,34 +37,30 @@ service.register({
   }
 })
 
-export default {
-  name: 'Signin',
-  data () {
-    return {
-      email: '',
-      password: ''
-    }
-  },
-  methods: {
-    signIn: function () {
-      firebase.auth().signInWithEmailAndPassword(this.email, this.password).then(res => {
-        res.user.getIdToken().then(token => {
-          this.signInServer(token)
-        })
-      }, err => {
-        alert(err.message)
-      })
-    },
+@Component
+export default class Signin extends Vue {
+  email: string = ''
+  password: string = ''
 
-    signInServer: function (token) {
-      axios.get('auth', { auth: token }).then(res => {
+  signIn () {
+    firebase.auth().signInWithEmailAndPassword(this.email, this.password).then(res => {
+      this.$emit('setUser', res.user)
+      res.user.getIdToken().then(token => {
         localStorage.setItem('jwt', token)
-        this.$router.push('/home')
-      }, err => {
-        alert(err.message)
-        localStorage.removeItem('jwt')
+        this.signInServer(token)
       })
-    }
+    }, err => {
+      alert(err.message)
+    })
+  }
+
+  signInServer (token) {
+    axios.get('auth', { auth: token }).then(res => {
+      router.push('/home')
+    }, err => {
+      alert(err.message)
+      localStorage.removeItem('jwt')
+    })
   }
 }
 </script>
