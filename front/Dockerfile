@@ -1,7 +1,7 @@
 # -----
 # 1st stage: prepare unprivileged user
 # -----
-FROM node:alpine as frontend-base
+FROM node:10.21.0-alpine3.9 as frontend-base
 
 ENV USER "echo"
 ENV GROUP "echo"
