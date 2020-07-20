@@ -1,0 +1,48 @@
+version: "3.7"
+
+services:
+  db:
+    image: postgres:latest
+    environment:
+      - "POSTGRES_PASSWORD=echo"
+      - "POSTGRES_USER=echo"
+      - "POSTGRES_DB=echo"
+    restart: always
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres:/var/lib/postgresql/data
+    network_mode: host
+
+  backend:
+    image: local/echo-backend:latest
+    build:
+      context: ./back
+      dockerfile: Dockerfile
+    environment:
+      - "CREDENTIALS=/echo/echo-sns-firebase-adminsdk.json"
+    restart: always
+    depends_on:
+      - db
+    ports:
+      - "8000:8000"
+    network_mode: host
+
+  frontend:
+    image: local/echo-frontend:latest
+    environment:
+      - "HOST=0.0.0.0"
+      - "PORT=8080"
+      - "NODE_ENV=development"
+    build:
+      context: ./front
+      dockerfile: Dockerfile
+    restart: always
+    depends_on:
+      - backend
+    ports:
+      - "8080:8080"
+    network_mode: host
+
+volumes:
+  postgres:
