@@ -26,7 +26,7 @@ func initDatabase() {
 	var err error
 	db, err = gorm.Open(
 		"postgres",
-		"user=echo dbname=echo password=echo sslmode=disable")
+		"host=localhost port=5432 user=echo dbname=echo password=echo sslmode=disable")
 	if err != nil {
 		panic(err)
 	}
